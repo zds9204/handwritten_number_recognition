@@ -10,10 +10,6 @@
 using namespace std;
 using namespace cv;
 
-const int featureLen = FEATURELENGTH;
-const int trainwidth = TRAINWIDTH;
-const int trainheight = TRAINHEIGHT;
-
 readUbyte::readUbyte(const string &imagefilename, const string &labelfilename)
 {
 	lab_ifs.open(labelfilename, ios_base::binary);
@@ -77,7 +73,7 @@ void readUbyte::ReadData(vector<NumTrainData> &trainData, int maxCount, bool IFU
 			break;
 
 		total++;
-		cout << total << endl;
+		//cout << total << endl;
 
 		//Read label    
 		lab_ifs.read(&label, 1);

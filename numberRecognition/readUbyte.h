@@ -16,9 +16,9 @@ using namespace cv;
 #define TRAINWIDTH		8
 #define TRAINHEIGHT		8
 
-extern const int featureLen;
-extern const int trainwidth;
-extern const int trainheight;
+const int featureLen = FEATURELENGTH;
+const int trainwidth = TRAINWIDTH;
+const int trainheight = TRAINHEIGHT;
 
 class NumTrainData
 {

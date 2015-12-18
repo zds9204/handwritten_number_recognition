@@ -12,11 +12,14 @@
 using namespace std;
 using namespace cv;
 
+
 class classifier
 {
 public:
-	virtual void train(const vector<NumTrainData>& trainData) = 0;
-	virtual void predict(const vector<NumTrainData>& predictData) = 0;
+	enum trainWay { HAND, AUTO };
+	virtual void read(const string &XMLfilename) = 0;
+	virtual void train(const vector<NumTrainData>& trainData, trainWay trainway = HAND) = 0;//训练分类器,默认不使用自动调参（太耗费时间）
+	virtual void predict(const vector<NumTrainData>& predictData) = 0;	//用训练好的分类器进行检测
 protected:
 	void show(string classifierName,int total, int right, int error);
 };
@@ -24,7 +27,8 @@ protected:
 class randomForest: public classifier
 {
 public:
-	void train(const vector<NumTrainData>& trainData);
+	void read(const string &XMLfilename);
+	void train(const vector<NumTrainData>& trainData, trainWay trainway = HAND);
 	void predict(const vector<NumTrainData>& predictData);
 private:
 	CvRTrees forest;
@@ -33,7 +37,8 @@ private:
 class SVMclassifier: public classifier
 {
 public:
-	void train(const vector<NumTrainData>& trainData);
+	void read(const string &XMLfilename);
+	void train(const vector<NumTrainData>& trainData, trainWay trainway = HAND);
 	void predict(const vector<NumTrainData>& predictData);
 private:
 	CvSVM svm;
