@@ -46,4 +46,15 @@ private:
 	CvTermCriteria criteria;
 };
 
+class bpNet : public classifier
+{
+public:
+	void read(const string &XMLfilename);
+	void train(const vector<NumTrainData>& trainData, trainWay trainway = HAND);
+	void predict(const vector<NumTrainData>& predictData);
+private:
+	CvANN_MLP bp; 
+	CvANN_MLP_TrainParams params;
+};
+
 #endif

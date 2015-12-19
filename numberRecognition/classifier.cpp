@@ -178,3 +178,90 @@ void SVMclassifier::predict(const vector<NumTrainData>& predictData)
 	return;
 }
 
+
+//bp神经网络
+void bpNet::read(const string &XMLfilename)
+{
+	bp.load(XMLfilename.c_str());
+}
+
+void bpNet::train(const vector<NumTrainData>& trainData, trainWay trainway)
+{
+	int testCount = trainData.size();
+
+	Mat data = Mat::zeros(testCount, featureLen, CV_32FC1);
+	Mat res = Mat::zeros(testCount, 10, CV_32FC1);	//注意神经网络的输入矩阵是浮点型的
+
+	cout << "bpNet begin training ..." << endl;
+	double t = (double)getTickCount();
+
+	for (int i = 0; i< testCount; i++)
+	{
+		NumTrainData td = trainData.at(i);
+		memcpy(data.data + i*featureLen*sizeof(float), td.data, featureLen*sizeof(float));
+
+		res.at<float>(i, (td.result - '0')) = (float)1;
+	}
+
+	/////////////START bpNet TRAINNING//////////////////
+	params.train_method = CvANN_MLP_TrainParams::BACKPROP;
+	params.bp_dw_scale = 0.1;
+	params.bp_moment_scale = 0.1;
+	CvTermCriteria TermCrlt;
+	TermCrlt.type = CV_TERMCRIT_ITER | CV_TERMCRIT_EPS;
+	TermCrlt.epsilon = 0.01f;
+	TermCrlt.max_iter = 5000;
+	params.term_crit = TermCrlt;
+
+	Mat layerSizes = (Mat_<int>(1, 3) << featureLen, 100, 10);
+
+	bp.create(layerSizes, CvANN_MLP::SIGMOID_SYM, 1, 1);
+
+	bp.train(data, res, Mat(), Mat(), params);
+
+	t = ((double)getTickCount() - t) / getTickFrequency();
+	cout << "Training finished! We do this in " << t << " second." << endl;
+
+	bp.save("bpNet.xml");
+}
+
+void bpNet::predict(const vector<NumTrainData>& predictData)
+{
+	Mat sample = Mat::zeros(1, featureLen, CV_32FC1);
+	Mat predictResult = Mat::zeros(1, 10, CV_32FC1);
+	int label;
+	int total = 0, right = 0, error = 0;
+
+	cout << "bpNet begin predicting ..." << endl;
+	double t = (double)getTickCount();
+	int result = 0;
+	double max = 0.0;
+	Point point;
+
+	for (vector<NumTrainData>::const_iterator iter = predictData.begin();
+		iter != predictData.end(); iter++)
+	{
+		for (int i = 0; i < featureLen; i++)
+			sample.at<float>(0, i) = (*iter).data[i];
+
+		label = (*iter).result;
+		bp.predict(sample, predictResult);
+
+		minMaxLoc(predictResult, NULL, &max, NULL, &point);	//找到最大值
+		result = point.x * cvRound(max);
+
+		if ((result + '0') == label)
+			right++;
+		else
+			error++;
+
+		total++;
+	}
+
+	show("bpNet", total, right, error);
+
+	t = ((double)getTickCount() - t) / getTickFrequency();
+	std::cout << "Predicting finished! We do this in " << t << " second." << endl;
+
+	return;
+}
