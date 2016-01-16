@@ -20,18 +20,6 @@ const int featureLen = FEATURELENGTH;
 const int trainwidth = TRAINWIDTH;
 const int trainheight = TRAINHEIGHT;
 
-class NumTrainData
-{
-public:
-	NumTrainData()
-	{
-		memset(data, 0, sizeof(data));
-		result = -1;
-	}
-public:
-	float data[FEATURELENGTH];
-	int result;
-};
 
 class readUbyte
 {
@@ -39,16 +27,29 @@ public:
 	readUbyte(const string &imagefilename, const string &labelfilename);
 	~readUbyte(){};
 
-	void ReadData(vector<NumTrainData> &feature, int maxCount, bool IFUSEROI = true);
+	void ReadData(Mat &mtrainData, Mat &mresult, int maxCount, bool IFUSEROI = true);
+
+private:
+	class NumTrainData	//用于临时存储数据的嵌套类
+	{
+	public:
+		NumTrainData()
+		{
+			memset(data, 0, sizeof(data));
+			result = -1;
+		}
+	public:
+		float data[FEATURELENGTH];
+		int result;
+	};
 
 private:
 	ifstream lab_ifs;
 	ifstream ifs;
+
+	readUbyte(const readUbyte &name);
 	void swapBuffer(char* buf);
 	void GetROI(Mat& src, Mat& dst);
-
-private:
-	readUbyte(const readUbyte &name);
 };
 
 #endif

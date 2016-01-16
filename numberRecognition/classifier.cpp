@@ -5,7 +5,7 @@
 #include <vector>
 #include <iomanip>
 #include "opencv2/opencv.hpp"
-#include "readUbyte.h"
+
 #include "classifier.h"
 
 using namespace std;
@@ -29,26 +29,12 @@ void randomForest::read(const string &XMLfilename)
 	forest.load(XMLfilename.c_str());
 }
 
-void randomForest::train(const vector<NumTrainData>& trainData, trainWay trainway)
+void randomForest::train(const Mat &mtrainData, const Mat &mresult, trainWay trainway)
 {
-	int testCount = trainData.size();
-
-	Mat data = Mat::zeros(testCount, featureLen, CV_32FC1);
-	Mat res = Mat::zeros(testCount, 1, CV_32SC1);
-
-	cout << "Random Fores begin training ..." << endl;
+	cout << "random forest begin training ..." << endl;
 	double t = (double)getTickCount();
-
-	for (int i = 0; i< testCount; i++)
-	{
-		NumTrainData td = trainData.at(i);
-		memcpy(data.data + i*featureLen*sizeof(float), td.data, featureLen*sizeof(float));
-
-		res.at<unsigned int>(i, 0) = td.result;
-	}
-
 	/////////////START RT TRAINNING//////////////////    
-	forest.train(data, CV_ROW_SAMPLE, res, Mat(), Mat(), Mat(), Mat(),
+	forest.train(mtrainData, CV_ROW_SAMPLE, mresult, Mat(), Mat(), Mat(), Mat(),
 		CvRTParams(15, 10, 0, false, 15, 0, false, 0, 200, 0.01f, CV_TERMCRIT_ITER | CV_TERMCRIT_EPS));
 
 	t = ((double)getTickCount() - t) / getTickFrequency();
@@ -57,25 +43,21 @@ void randomForest::train(const vector<NumTrainData>& trainData, trainWay trainwa
 	forest.save("randomForest.xml");
 }
 
-void randomForest::predict(const vector<NumTrainData>& predictData)
+void randomForest::predict(const Mat &predictData, const Mat &mresult)
 {
-	Mat sample = Mat::zeros(1, featureLen, CV_32FC1);
-	int predictResult, label;
+	int predictResult;
 	int total = 0, right = 0, error = 0;
 
 	cout << "Random Fores begin predicting ..." << endl;
 	double t = (double)getTickCount();
 
-	for (vector<NumTrainData>::const_iterator iter = predictData.begin();
-		iter != predictData.end(); iter ++)
+	for (unsigned int i = 0; i != predictData.rows; i++)
 	{
-		for (int i = 0; i < featureLen; i++)
-			sample.at<float>(0, i) = (*iter).data[i];
+		const Mat predictData_i = predictData.row(i);
 
-		label = (*iter).result;
-		predictResult = cvRound(forest.predict(sample));
+		predictResult = cvRound(forest.predict(predictData_i));
 
-		if (predictResult == label)
+		if (predictResult == mresult.at<int>(i, 0))
 			right++;
 		else
 			error++;
@@ -99,33 +81,17 @@ void SVMclassifier::read(const string &XMLfilename)
 }
 
 
-void SVMclassifier::train(const vector<NumTrainData>& trainData, trainWay trainway)
+void SVMclassifier::train(const Mat &mtrainData, const Mat &mresult, trainWay trainway)
 {
-	int testCount = trainData.size();
-
-	Mat m = Mat::zeros(1, featureLen, CV_32FC1);
-	Mat data = Mat::zeros(testCount, featureLen, CV_32FC1);
-	Mat res = Mat::zeros(testCount, 1, CV_32SC1);
-
 	cout << "SVM begin training ..." << endl;
 	double t = (double)getTickCount();
-
-	for (int i = 0; i< testCount; i++)
-	{
-		NumTrainData td = trainData.at(i);
-		memcpy(m.data, td.data, featureLen*sizeof(float));
-		normalize(m, m);	//SVM需要对数据进行归一化
-		memcpy(data.data + i*featureLen*sizeof(float), m.data, featureLen*sizeof(float));
-
-		res.at<unsigned int>(i, 0) = td.result;
-	}
 
 	criteria = cvTermCriteria(CV_TERMCRIT_EPS, 1000, FLT_EPSILON);
 	param = CvSVMParams(CvSVM::C_SVC, CvSVM::RBF, 10.0, 0.5, 1.0, 62.0, 0.5, 0.1, NULL, criteria);
 
 	if (trainway == AUTO)
 	{
-		svm.train_auto(data, res, Mat(), Mat(), param, 10);
+		svm.train_auto(mtrainData, mresult, Mat(), Mat(), param, 10);
 		CvSVMParams params = svm.get_params();
 		cout << "SVM parameters:" << endl;
 		cout << "    C" << " coef0" << " degree" << "   gamma" << " kernel" << "  p" << "   cweights" <<endl;
@@ -135,7 +101,7 @@ void SVMclassifier::train(const vector<NumTrainData>& trainData, trainWay trainw
 		cout << params.class_weights << endl;
 	}
 	else
-		svm.train(data, res, Mat(), Mat(), param);
+		svm.train(mtrainData, mresult, Mat(), Mat(), param);
 
 	t = ((double)getTickCount() - t) / getTickFrequency();
 	cout << "Training finished! We do this in " << t << " second." << endl;
@@ -143,26 +109,20 @@ void SVMclassifier::train(const vector<NumTrainData>& trainData, trainWay trainw
 	svm.save("SVMclassifier.xml");
 }
 
-void SVMclassifier::predict(const vector<NumTrainData>& predictData)
+void SVMclassifier::predict(const Mat &predictData, const Mat &mresult)
 {
-	Mat sample = Mat::zeros(1, featureLen, CV_32FC1);
-	int predictResult, label;
+	int predictResult;
 	int total = 0, right = 0, error = 0;
 
 	cout << "SVM begin predicting ..." << endl;
 	double t = (double)getTickCount();
 
-	for (vector<NumTrainData>::const_iterator iter = predictData.begin();
-		iter != predictData.end(); iter++)
+	for (unsigned int i = 0; i != predictData.rows; i++)
 	{
-		for (int i = 0; i < featureLen; i++)
-			sample.at<float>(0, i) = (*iter).data[i];
+		const Mat predictData_i = predictData.row(i);
 
-		label = (*iter).result;
-		normalize(sample, sample);
-		predictResult = cvRound(svm.predict(sample));
-
-		if (predictResult == label)
+		predictResult = cvRound(svm.predict(predictData_i));
+		if (predictResult == mresult.at<int>(i, 0))
 			right++;
 		else
 			error++;
@@ -185,23 +145,15 @@ void bpNet::read(const string &XMLfilename)
 	bp.load(XMLfilename.c_str());
 }
 
-void bpNet::train(const vector<NumTrainData>& trainData, trainWay trainway)
+void bpNet::train(const Mat &mtrainData, const Mat &mresult, trainWay trainway)
 {
-	int testCount = trainData.size();
-
-	Mat data = Mat::zeros(testCount, featureLen, CV_32FC1);
-	Mat res = Mat::zeros(testCount, 10, CV_32FC1);	//注意神经网络的输入矩阵是浮点型的
-
 	cout << "bpNet begin training ..." << endl;
 	double t = (double)getTickCount();
 
-	for (int i = 0; i< testCount; i++)
-	{
-		NumTrainData td = trainData.at(i);
-		memcpy(data.data + i*featureLen*sizeof(float), td.data, featureLen*sizeof(float));
+	Mat res = Mat::zeros(mresult.rows, 10, CV_32FC1);
+	for (int i = 0; i < mresult.rows; i++)
+		res.at<float>(i, (mresult.at<int>(i, 0) - '0')) = (float)1;
 
-		res.at<float>(i, (td.result - '0')) = (float)1;
-	}
 
 	/////////////START bpNet TRAINNING//////////////////
 	params.train_method = CvANN_MLP_TrainParams::BACKPROP;
@@ -213,11 +165,11 @@ void bpNet::train(const vector<NumTrainData>& trainData, trainWay trainway)
 	TermCrlt.max_iter = 5000;
 	params.term_crit = TermCrlt;
 
-	Mat layerSizes = (Mat_<int>(1, 3) << featureLen, 100, 10);
+	Mat layerSizes = (Mat_<int>(1, 3) << mtrainData.cols, 100, 10);
 
 	bp.create(layerSizes, CvANN_MLP::SIGMOID_SYM, 1, 1);
 
-	bp.train(data, res, Mat(), Mat(), params);
+	bp.train(mtrainData, res, Mat(), Mat(), params);
 
 	t = ((double)getTickCount() - t) / getTickFrequency();
 	cout << "Training finished! We do this in " << t << " second." << endl;
@@ -225,11 +177,9 @@ void bpNet::train(const vector<NumTrainData>& trainData, trainWay trainway)
 	bp.save("bpNet.xml");
 }
 
-void bpNet::predict(const vector<NumTrainData>& predictData)
+void bpNet::predict(const Mat &predictData, const Mat &mresult)
 {
-	Mat sample = Mat::zeros(1, featureLen, CV_32FC1);
 	Mat predictResult = Mat::zeros(1, 10, CV_32FC1);
-	int label;
 	int total = 0, right = 0, error = 0;
 
 	cout << "bpNet begin predicting ..." << endl;
@@ -238,24 +188,19 @@ void bpNet::predict(const vector<NumTrainData>& predictData)
 	double max = 0.0;
 	Point point;
 
-	for (vector<NumTrainData>::const_iterator iter = predictData.begin();
-		iter != predictData.end(); iter++)
+	for (unsigned int i = 0; i != predictData.rows; i++)
 	{
-		for (int i = 0; i < featureLen; i++)
-			sample.at<float>(0, i) = (*iter).data[i];
-
-		label = (*iter).result;
-		bp.predict(sample, predictResult);
+		bp.predict(predictData.row(i), predictResult);
 
 		minMaxLoc(predictResult, NULL, &max, NULL, &point);	//找到最大值
 		result = point.x * cvRound(max);
 
-		if ((result + '0') == label)
-			right++;
+		if ((result + '0') == mresult.at<int>(i, 0))
+			right ++;
 		else
-			error++;
+			error ++;
 
-		total++;
+		total ++;
 	}
 
 	show("bpNet", total, right, error);

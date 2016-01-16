@@ -24,12 +24,18 @@
     <ClCompile Include="classifier.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="dimReduction.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="readUbyte.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="classifier.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="dimReduction.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

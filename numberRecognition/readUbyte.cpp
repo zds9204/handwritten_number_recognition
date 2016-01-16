@@ -35,8 +35,10 @@ readUbyte::readUbyte(const string &imagefilename, const string &labelfilename)
 	}
 }
 
-void readUbyte::ReadData(vector<NumTrainData> &trainData, int maxCount, bool IFUSEROI)
+void readUbyte::ReadData(Mat &mtrainData, Mat &mresult, int maxCount, bool IFUSEROI)
 {
+	vector<NumTrainData> trainData;
+
 	char magicNum[4], ccount[4], crows[4], ccols[4];
 	ifs.read(magicNum, sizeof(magicNum));
 	ifs.read(ccount, sizeof(ccount));
@@ -123,6 +125,20 @@ void readUbyte::ReadData(vector<NumTrainData> &trainData, int maxCount, bool IFU
 
 	ifs.close();
 	lab_ifs.close();
+
+	//将结果转换为矩阵的形式存储
+	mtrainData.create(static_cast<int>(trainData.size()), featureLen, CV_32FC1);
+	mresult.create(static_cast<int>(trainData.size()), 1, CV_32SC1);
+	for (unsigned int i = 0; i < trainData.size(); i++)
+	{
+		float *ptrainData = mtrainData.ptr<float>(i);
+		int *presult = mresult.ptr<int>(i);
+
+		for (unsigned int j = 0; j < featureLen; j++)
+			ptrainData[j] = trainData[i].data[j];
+
+		presult[0] = trainData[i].result;
+	}
 
 	return ;
 }
